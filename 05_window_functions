@@ -1,0 +1,120 @@
+
+1. Assign row numbers to each order
+SELECT Order_ID, ROW_NUMBER() OVER (ORDER BY Order_Date) AS row_num
+FROM Orders123;
+
+2. Rank products by price
+SELECT Product_Name, Unit_Price,
+       RANK() OVER (ORDER BY Unit_Price DESC) AS price_rank
+FROM Orders123;
+
+3. Dense rank products by sales
+SELECT Product_Name,
+       DENSE_RANK() OVER (ORDER BY (Quantity*Unit_Price) DESC) AS sales_rank
+FROM Orders123;
+
+4. Find running total of sales
+SELECT Order_Date,
+       SUM(Quantity*Unit_Price) OVER (ORDER BY Order_Date) AS running_total
+FROM Orders123;
+
+5. Calculate cumulative sum by month
+SELECT TO_CHAR(Order_Date,'YYYY-MM') AS month,
+       SUM(Quantity*Unit_Price) OVER (PARTITION BY TO_CHAR(Order_Date,'YYYY-MM')
+       ORDER BY Order_Date) AS monthly_cumulative
+FROM Orders123;
+
+6. Find moving average of last 3 days
+SELECT Order_Date,
+       AVG(Quantity*Unit_Price) OVER (
+       ORDER BY Order_Date
+       ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg
+FROM Orders123;
+
+7. Calculate lag of previous day sales
+SELECT Order_Date,
+       LAG(Quantity*Unit_Price) OVER (ORDER BY Order_Date) AS previous_sale
+FROM Orders123;
+
+8. Calculate lead of next day sales
+SELECT Order_Date,
+       LEAD(Quantity*Unit_Price) OVER (ORDER BY Order_Date) AS next_sale
+FROM Orders123;
+
+9. Find difference between current and previous sale
+SELECT Order_Date,
+       (Quantity*Unit_Price) - 
+       LAG(Quantity*Unit_Price) OVER (ORDER BY Order_Date) AS sale_diff
+FROM Orders123;
+
+10. Partition sales by region (Store_Location)
+SELECT Store_Location,
+       SUM(Quantity*Unit_Price) OVER (PARTITION BY Store_Location) AS region_sales
+FROM Orders123;
+
+11. Find top 3 products per category
+SELECT * FROM (
+  SELECT Product_Category, Product_Name,
+         ROW_NUMBER() OVER (PARTITION BY Product_Category 
+         ORDER BY Unit_Price DESC) rn
+  FROM Orders123)
+WHERE rn <= 3;
+
+12. Find bottom 2 customers by sales
+SELECT * FROM (
+  SELECT Customer_Name,
+         SUM(Quantity*Unit_Price) total_sales,
+         ROW_NUMBER() OVER (ORDER BY SUM(Quantity*Unit_Price)) rn
+  FROM Orders123
+  GROUP BY Customer_Name)
+WHERE rn <= 2;
+
+13. Calculate percentage of total sales
+SELECT Product_Name,
+       ROUND((Quantity*Unit_Price) / 
+       SUM(Quantity*Unit_Price) OVER () * 100,2) AS percent_total
+FROM Orders123;
+
+14. Calculate NTILE distribution of customers
+SELECT Customer_Name,
+       NTILE(4) OVER (ORDER BY SUM(Quantity*Unit_Price) DESC) AS quartile
+FROM Orders123
+GROUP BY Customer_Name;
+
+15. Find first order per customer
+SELECT * FROM (
+  SELECT o.*, 
+         ROW_NUMBER() OVER (PARTITION BY Customer_ID ORDER BY Order_Date) rn
+  FROM Orders123 o)
+WHERE rn = 1;
+
+16. Find last order per customer
+SELECT * FROM (
+  SELECT o.*, 
+         ROW_NUMBER() OVER (PARTITION BY Customer_ID ORDER BY Order_Date DESC) rn
+  FROM Orders123 o)
+WHERE rn = 1;
+
+17. Calculate average salary within department (Employees table)
+SELECT dept,
+       AVG(salary) OVER (PARTITION BY dept) AS avg_salary
+FROM employees;
+
+18. Compare current row with max value in partition
+SELECT Product_Category, Product_Name, Unit_Price,
+       MAX(Unit_Price) OVER (PARTITION BY Product_Category) AS max_price
+FROM Orders123;
+
+19. Identify duplicate records using ROW_NUMBER
+SELECT * FROM (
+  SELECT o.*, ROW_NUMBER() OVER (
+  PARTITION BY Customer_ID, Product_Name ORDER BY Order_ID) rn
+  FROM Orders123 o)
+WHERE rn > 1;
+
+20. Find cumulative distinct count
+SELECT Order_Date,
+       COUNT(DISTINCT Customer_ID) OVER (
+       ORDER BY Order_Date
+       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_customers
+FROM Orders123;
