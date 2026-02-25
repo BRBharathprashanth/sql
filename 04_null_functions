@@ -1,0 +1,93 @@
+CREATE TABLE Orders123 (
+  Order_ID NUMBER PRIMARY KEY,
+   Order_Date DATE,
+    Customer_ID VARCHAR2(10),
+    Customer_Name VARCHAR2(100),
+    Product_Category VARCHAR2(100),
+    Product_Name VARCHAR2(150),
+    Quantity NUMBER,
+    Unit_Price NUMBER(10,2),
+    Payment_Mode VARCHAR2(50),
+    Store_Location VARCHAR2(100)
+);
+
+--INSERT ALL
+  --  INTO Orders123 VALUES (1001, DATE '2026-02-01', 'C001', 'Ravi Kumar', 'Electronics', 'Wireless Mouse', 2, 799, 'UPI', 'Bangalore')
+     --INTO Orders123 VALUES (1002, DATE '2026-02-02', 'C002', 'Sneha Reddy', 'Grocery', 'Basmati Rice 5kg', 1, 650, 'Credit Card', 'Hyderabad')
+    I--INTO Orders123 VALUES (1003, DATE '2026-02-03', 'C003', 'Arjun Mehta', 'Fashion', 'Men''s T-Shirt', 3, 499, 'Cash', 'Chennai')
+   -- INTO Orders123 VALUES (1004, DATE '2026-02-04', 'C004', 'Priya Sharma', 'Electronics', 'Bluetooth Speaker', 1, 1499, 'Debit Card', 'Mumbai')
+    --INTO Orders123 VALUES (1005, DATE '2026-02-05', 'C005', 'Kiran Rao', 'Home & Kitchen', 'Mixer Grinder', 1, 2499, 'UPI', 'Bangalore')
+    --INTO Orders123 VALUES (1006, DATE '2026-02-06', 'C006', 'Neha Verma', 'Beauty', 'Face Cream', 4, 299, 'Credit Card', 'Delhi')
+   -- INTO Orders123 VALUES (1007, DATE '2026-02-07', 'C007', 'Rahul Das', 'Grocery', 'Cooking Oil 1L', 5, 180, 'Cash', 'Kolkata')
+  --  INTO Orders123 VALUES (1008, DATE '2026-02-08', 'C008', 'Anjali Nair', 'Fashion', 'Women''s Jeans', 2, 1199, 'UPI', 'Kochi')
+    --INTO Orders123 VALUES (1009, DATE '2026-02-09', 'C009', 'Suresh Patel', 'Electronics', 'Smartphone', 1, 15999, 'Debit Card', 'Ahmedabad')
+   -- INTO Orders123 VALUES (1010, DATE '2026-02-10', 'C010', 'Meena Iyer', 'Home & Kitchen', 'Pressure Cooker', 1, 1899, 'Credit Card', 'Pune')
+--SELECT * FROM dual;
+
+--COMMIT;
+
+1. Replace NULL price with 0
+SELECT NVL(Unit_Price, 0) AS Unit_Price FROM Orders123;
+
+2. Replace NULL Customer_Name with 'Unknown'
+SELECT NVL(Customer_Name, 'Unknown') AS Customer_Name FROM Orders123;
+
+3. Count NULL values in Product_Name
+SELECT COUNT(*) FROM Orders123 WHERE Product_Name IS NULL;
+
+4. Find rows where Order_Date is NULL
+SELECT * FROM Orders123 WHERE Order_Date IS NULL;
+
+5. Use COALESCE to return first non-null value
+SELECT COALESCE(Customer_Name, Customer_ID, 'No Data') FROM Orders123;
+
+6. Use NVL to replace NULL values
+SELECT NVL(Unit_Price, 0) FROM Orders123;
+
+7. IFNULL function (Not supported in Oracle - use NVL instead)
+SELECT NVL(Unit_Price, 0) FROM Orders123;
+
+8. Check if column is NULL
+SELECT * FROM Orders123 WHERE Unit_Price IS NULL;
+
+9. Check if column is NOT NULL
+SELECT * FROM Orders123 WHERE Unit_Price IS NOT NULL;
+
+10. Use NULLIF between two columns
+SELECT NULLIF(Quantity, Unit_Price) FROM Orders123;
+
+11. Replace blank values with NULL
+UPDATE Orders123 SET Customer_Name = NULL WHERE TRIM(Customer_Name) = '';
+
+12. Count non-null values
+SELECT COUNT(Unit_Price) FROM Orders123;
+
+13. Filter records where price is NULL or 0
+SELECT * FROM Orders123 WHERE Unit_Price IS NULL OR Unit_Price = 0;
+
+14. Use CASE to handle NULL values
+SELECT CASE 
+         WHEN Unit_Price IS NULL THEN 0 
+         ELSE Unit_Price 
+       END AS Unit_Price
+FROM Orders123;
+
+15. Compare NULL values properly
+SELECT * FROM Orders123 WHERE Unit_Price IS NULL;
+
+16. Handle NULL in aggregation
+SELECT SUM(NVL(Unit_Price,0)) FROM Orders123;
+
+17. Find average excluding NULL values
+SELECT AVG(Unit_Price) FROM Orders123;
+
+18. Find sum ignoring NULL values
+SELECT SUM(Unit_Price) FROM Orders123;
+
+19. Identify columns containing NULL using metadata
+SELECT column_name 
+FROM user_tab_columns 
+WHERE table_name = 'ORDERS123';
+
+20. Convert NULL to default system date
+SELECT NVL(Order_Date, SYSDATE) FROM Orders123;
