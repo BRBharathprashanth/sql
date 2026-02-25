@@ -1,0 +1,38 @@
+--Extract year from Order_Date.
+select extract(year from order_date) from orders
+--Extract month from Order_Date.
+select extract(month from order_date) from orders
+--Extract day from Order_Date.
+select extract(day from order_date) from orders
+--Find current date.
+select sysdate from dual
+--Find current timestamp.
+select systimestamp from dual
+--Add 7 days to Order_Date.
+select sysdate+7 from dual
+--Subtract 30 days from Order_Date.
+select order_date - 30 from orders
+--Find difference between two dates.
+select trunc(sysdate - order_date) from orders
+--Find number of months between two dates.
+select trunc(months_between(TO_DATE('04-02-2027', 'MM-DD-YYYY'), order_date)) from orders
+--Find last day of the month.
+select last_day(order_date) from orders;
+--Get first day of the year.
+select trunc(order_date,'YEAR') from orders;
+--Format date as 'DD-MM-YYYY'.
+select to_char(order_date, 'DD-MM-YYYY') from orders;
+--Convert string to date.
+select to_date('25-02-2026', 'DD-MM-YYYY') from dual;
+--Convert date to string.
+select to_char(order_date, 'DD-MM-YYYY') from orders;
+--Find week number of the year.
+select to_char(order_date, 'WW') from orders;
+--Find day name from date.
+select to_char(order_date, 'DAY') from orders;
+--Find quarter of the year.
+select to_char(order_date, 'Q') from orders;
+--Calculate age from DOB.
+select floor(months_between(sysdate, to_date('11-03-1997','DD-MM-YYYY')) / 12) AS age from dual
+--Find next Monday after a given date.
+select next_day(order_date, 'MONDAY') from orders
