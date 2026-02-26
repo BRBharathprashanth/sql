@@ -1,0 +1,56 @@
+ SELECT SIN(30 * ACOS(-1) / 180) AS sine_value FROM DUAL;
+
+SELECT COS(60 * ACOS(-1) / 180) AS cosine_value FROM DUAL;
+
+select tan(45 * ACOS(-1)/ 180) AS tangent_value FROM DUAL;
+
+select 180 * ACOS(-1) / 180 AS radians_value FROM DUAL;
+
+select (ACOS(-1) * 180) / ACOS(-1) AS degree_value FROM DUAL;
+
+select log(10, 1000) AS log_base10 FROM DUAL;
+
+select LN(10) AS naturaql_log FROM DUAL;
+
+select power(5, 2) AS square_value FROM DUAL;
+
+select power(4, 3) AS cube_value FROM DUAL;
+
+select exp(sum(LN(LEVEL))) AS factorial_value FROM DUAL CONNECT BY LEVEL <= 5;
+
+select GREATEST(10, 25, 15) AS greatest_value FROM DUAL;
+
+select LEAST(10, 25, 15) AS least_value FROM DUAL; 
+
+CREATE TABLE sales_data (
+    id NUMBER,
+    sales NUMBER,
+    profit NUMBER
+);
+
+INSERT INTO sales_data VALUES (1, 1000, 200);
+INSERT INTO sales_data VALUES (2, 1500, 300);
+INSERT INTO sales_data VALUES (3, 2000, 400);
+INSERT INTO sales_data VALUES (4, 2500, 450);
+INSERT INTO sales_data VALUES (5, 3000, 500);
+INSERT INTO sales_data VALUES (6, 3500, 650);
+INSERT INTO sales_data VALUES (7, 4000, 700);
+INSERT INTO sales_data VALUES (8, 4500, 850);
+INSERT INTO sales_data VALUES (9, 5000, 900);
+INSERT INTO sales_data VALUES (10, 5500, 1000);
+
+select VARIANCE(sales) AS variance_value FROM sales_data;
+
+SELECT STDDEV(sales) AS std_deviation FROM sales_data;
+
+SELECT AVG(ABS(sales - (SELECT AVG(sales) FROM sales_data))) AS avg_deviation FROM sales_data;
+
+SELECT EXP(AVG(LN(sales))) AS geometric_mean FROM sales_data;
+
+SELECT COUNT(sales) / SUM(1 / sales) AS harmonic_mean FROM sales_data;
+
+SELECT SUM(POWER(sales, 2)) AS sum_of_squares FROM sales_data;
+
+SELECT CORR(sales, profit) AS correlation FROM sales_data;
+
+SELECT REGR_SLOPE(profit, sales) AS regression_slope FROM sales_data;
