@@ -1,0 +1,271 @@
+Q1: Write a PL/SQL block that performs two UPDATE statements on hr_employees and commits the changes at the end.
+A:
+
+UPDATE hr_employees SET salary = salary * 1.05 WHERE employee_id = 109;
+UPDATE hr_employees SET salary = salary * 1.10 WHERE employee_id = 101;
+COMMIT;
+
+
+Q2: Write a block that updates a row in hr_employees, then rolls back the transaction, and verify that the row remains unchanged.
+A:
+
+UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 101;
+ROLLBACK;
+SELECT * FROM hr_employees;
+
+
+Q3: Create a SAVEPOINT, perform an UPDATE, then roll back the entire transaction and commit. What happens to the update?
+A:
+
+SAVEPOINT sp1;
+UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 101;
+ROLLBACK;
+COMMIT;
+
+Q4: Write a PL/SQL block that performs an UPDATE and commits only if at least one row is updated; otherwise, roll back the transaction.
+A:
+
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary * 2.0
+    WHERE department_id = 110;
+
+    IF SQL%ROWCOUNT = 0 THEN
+        ROLLBACK;
+    ELSE
+        COMMIT;
+    END IF;
+END;
+
+
+Q5: Create a procedure that updates all rows in hr_employees and commits the transaction at the end.
+A:
+
+CREATE OR REPLACE PROCEDURE update_hr_employees
+IS
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary * 1.1;
+    COMMIT;
+END;
+/
+
+Q6: Write a PL/SQL block that performs an UPDATE and ensures that if any error occurs, all changes are rolled back and the error is re-raised.
+A:
+
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary * 1.1
+    WHERE department_id = 110;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+
+Q7: Write a block with two SAVEPOINTs. Perform two updates and roll back to the first savepoint. Which updates are preserved?
+A:
+
+BEGIN
+    UPDATE hr_employees SET salary = salary + 1000 WHERE department_id = 110;
+    SAVEPOINT after_first;
+
+    UPDATE hr_employees SET salary = salary + 500 WHERE department_id = 90;
+    SAVEPOINT after_second;
+
+    ROLLBACK TO after_first;
+    COMMIT;
+END;
+
+Q8: Write a block that updates one row, sets a SAVEPOINT, deletes another row, then rolls back to the savepoint and commits. What is the final result?
+A:
+
+BEGIN 
+    UPDATE hr_employees SET salary = salary * 2.0 WHERE department_id = 40;
+    SAVEPOINT sp1;
+
+    DELETE FROM hr_employees WHERE employee_id = 102;
+
+    ROLLBACK TO sp1;
+    COMMIT;
+END;
+
+Q9: Session A updates a row but does not commit. Session B tries to select the same row. What will Session B see?
+A:
+
+UPDATE hr_employees
+SET salary = 5000
+WHERE employee_id = 101;
+SELECT salary FROM hr_employees WHERE employee_id = 101;
+
+
+
+Q10: Write a transaction that is read-only, performs a SELECT on hr_employees, and then ends the transaction.
+A:
+
+SET TRANSACTION READ ONLY;
+
+SELECT * FROM hr_employees WHERE department_id = 101;
+
+COMMIT;
+
+
+Q11: Write a block that updates multiple rows and displays how many rows were affected using SQL%ROWCOUNT.
+A:
+
+DECLARE
+    v_rows NUMBER;
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary + 1000
+    WHERE department_id = 50;
+
+    v_rows := SQL%ROWCOUNT;
+
+    DBMS_OUTPUT.PUT_LINE('Rows updated: ' || v_rows);
+
+    COMMIT;
+END;
+
+Q12: Demonstrate a nested block where the inner block commits and the outer block performs a rollback. What happens?
+A:
+
+BEGIN
+    BEGIN
+        UPDATE hr_employees SET salary = salary + 1000 WHERE employee_id = 101;
+        COMMIT;
+    END;
+
+    ROLLBACK;
+END;
+
+Q13: Create a procedure that performs two updates and commits only if both updates affect at least one row; otherwise, roll back.
+A:
+
+CREATE OR REPLACE PROCEDURE update_two_steps
+IS
+    v1 NUMBER;
+    v2 NUMBER;
+BEGIN
+    UPDATE hr_employees SET salary = salary + 500 WHERE department_id = 101;
+    v1 := SQL%ROWCOUNT;
+
+    UPDATE hr_employees SET salary = salary + 300 WHERE department_id = 206;
+    v2 := SQL%ROWCOUNT;
+
+    IF v1 > 0 AND v2 > 0 THEN
+        COMMIT;
+    ELSE
+        ROLLBACK;
+    END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+Q14: Write a block that sets a SAVEPOINT before a loop that updates rows, and rolls back to that savepoint if an error occurs.
+A:
+
+DECLARE
+BEGIN
+    SAVEPOINT before_loop;
+
+    FOR rec IN (SELECT employee_id FROM hr_employees WHERE department_id = 101) LOOP
+        UPDATE hr_employees
+        SET salary = salary + 100
+        WHERE employee_id = rec.employee_id;
+    END LOOP;
+
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK TO before_loop;
+        RAISE;
+END;
+/
+
+Q15: Explain atomicity using a transaction with two UPDATE statements.
+A:
+
+BEGIN
+ UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 101;
+ UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 206;
+ COMMIT;
+END;
+
+
+
+Q16: In the same session, perform an UPDATE and then SELECT the same row before committing. What will be observed?
+A:
+
+BEGIN
+    UPDATE hr_employees SET salary = 7000 WHERE employee_id = 101;
+
+    SELECT salary INTO :v_sal
+    FROM hr_employees
+    WHERE employee_id = 101;
+END;
+
+
+Q17: Write a statement that rolls back the entire transaction without using a savepoint.
+A:
+
+ROLLBACK;
+
+Q18: After rolling back to a savepoint, can the same savepoint name be reused? Demonstrate.
+A:
+
+SAVEPOINT sp1;
+UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 101;
+
+SAVEPOINT sp1;
+UPDATE hr_employees SET salary = salary * 2.07 WHERE employee_id = 101;
+
+Q19: Write a procedure that updates rows using a cursor and commits every 10 rows.
+A:
+
+CREATE OR REPLACE PROCEDURE update_in_batches
+IS
+    CURSOR c1 IS SELECT employee_id FROM hr_employees;
+    v_count NUMBER := 0;
+BEGIN
+    FOR rec IN c1 LOOP
+        UPDATE hr_employees
+        SET salary = salary + 100
+        WHERE employee_id = rec.employee_id;
+
+        v_count := v_count + 1;
+
+        IF MOD(v_count, 10) = 0 THEN
+            COMMIT;
+        END IF;
+    END LOOP;
+
+    COMMIT;
+END;
+/
+
+Q20: Write a block that performs an UPDATE, creates a SAVEPOINT, performs another UPDATE, and then commits. How many updates are committed?
+A:
+
+BEGIN
+    UPDATE hr_employees SET salary = salary + 100 WHERE department_id = 101;
+
+    SAVEPOINT sp1;
+
+    UPDATE hr_employees SET salary = salary + 200 WHERE department_id = 206;
+
+    COMMIT;
+END;
+/
+
+
+FOR rec IN (SELECT employee_id FROM hr_employees) LOOP
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = rec.employee_id;
+    COMMIT;
+END LOOP;
