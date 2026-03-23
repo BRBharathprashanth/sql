@@ -1,0 +1,263 @@
+H1. Transaction that "moves" all employees from dept 50 to 60 (UPDATE department_id); single COMMIT. Hint: UPDATE hr_emp_backup SET department_id = 60 WHERE department_id = 50; COMMIT;
+FOR rec IN (SELECT employee_id FROM hr_employees) LOOP
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = rec.employee_id;
+    COMMIT;
+END LOOP;
+
+UPDATE hr_employees
+SET department_id = 60
+WHERE department_id = 50;
+
+COMMIT;
+
+H2. Nested savepoints: a, b, c; ROLLBACK TO b. What is state of work after c? Hint: Work after b (including c) is undone.
+BEGIN
+    SAVEPOINT a;
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = 1;
+
+    SAVEPOINT b;
+    UPDATE hr_employees SET salary = salary + 200 WHERE employee_id = 2;
+
+    SAVEPOINT c;
+    UPDATE hr_employees SET salary = salary + 300 WHERE employee_id = 3;
+
+    ROLLBACK TO b;
+
+    COMMIT;
+END;
+/
+
+H3. SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; run two SELECTs; then UPDATE; COMMIT. Hint: Serializable snapshot for the transaction.
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+SELECT * FROM hr_employees;
+SELECT * FROM hr_employees;
+
+UPDATE hr_employees
+SET salary = salary + 100
+WHERE employee_id = 101;
+
+COMMIT;
+
+H4. Procedure that updates salary for one employee; COMMIT inside; caller expects to roll back. Hint: Procedure COMMIT breaks caller's transaction; document or avoid COMMIT in procedure.
+CREATE OR REPLACE PROCEDURE update_salary(p_id NUMBER)
+IS
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary + 1000
+    WHERE employee_id = p_id;
+
+    COMMIT; -- breaks caller control
+END;
+/
+
+H5. Two sessions: A updates row and holds; B updates same row. Hint: B waits for A to COMMIT or ROLLBACK (row lock).
+
+Session A:
+
+UPDATE hr_employees
+SET salary = salary + 100
+WHERE employee_id = 101;
+-- no commit
+
+Session B:
+
+UPDATE hr_employees
+SET salary = salary + 200
+WHERE employee_id = 101;
+-- waits
+
+H6. Block that inserts into audit table, then updates backup; on any exception ROLLBACK both. Hint: EXCEPTION WHEN OTHERS THEN ROLLBACK; RAISE;
+BEGIN
+    INSERT INTO audit_log VALUES ('Update started');
+
+    UPDATE hr_employees
+    SET salary = salary + 100
+    WHERE employee_id = 101;
+
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+H7. Use autonomous transaction in procedure to log "transaction started" without affecting main transaction commit/rollback. Hint: PRAGMA AUTONOMOUS_TRANSACTION; INSERT INTO log_table ...; COMMIT;
+CREATE OR REPLACE PROCEDURE log_start
+IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    INSERT INTO log_table VALUES ('Transaction started');
+    COMMIT;
+END;
+/
+
+H8. SAVEPOINT in loop: each iteration SAVEPOINT; on error ROLLBACK TO that savepoint and continue. Hint: SAVEPOINT sp_loop; BEGIN ... EXCEPTION WHEN OTHERS THEN ROLLBACK TO sp_loop; END;
+BEGIN
+    FOR rec IN (SELECT employee_id FROM hr_employees) LOOP
+        SAVEPOINT sp_loop;
+
+        BEGIN
+            UPDATE hr_employees
+            SET salary = salary + 100
+            WHERE employee_id = rec.employee_id;
+
+        EXCEPTION
+            WHEN OTHERS THEN
+                ROLLBACK TO sp_loop;
+        END;
+    END LOOP;
+
+    COMMIT;
+END;
+/
+
+H9. Explain durability: after COMMIT, server crashes; after restart. Hint: Committed data is in redo log and is recovered.
+UPDATE hr_employees
+SET salary = salary + 100
+WHERE employee_id = 101;
+
+COMMIT;
+-- survives crash (durability concept)
+
+H10. Transaction with 3 UPDATEs; second UPDATE raises error (e.g. constraint). Hint: EXCEPTION handler ROLLBACK; all three undone.
+BEGIN
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = 1;
+
+    UPDATE hr_employees SET salary = NULL WHERE employee_id = 2; -- error
+
+    UPDATE hr_employees SET salary = salary + 200 WHERE employee_id = 3;
+
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+END;
+/
+
+H11. Procedure with OUT parameter p_updated NUMBER; set to SQL%ROWCOUNT after UPDATE; caller decides COMMIT or ROLLBACK. Hint: p_updated := SQL%ROWCOUNT; no COMMIT in procedure.
+CREATE OR REPLACE PROCEDURE update_emp(p_updated OUT NUMBER)
+IS
+BEGIN
+    UPDATE hr_employees
+    SET salary = salary + 100
+    WHERE department_id = 50;
+
+    p_updated := SQL%ROWCOUNT;
+END;
+/
+
+H12. Batch update: loop 1 to 100, UPDATE one row each, COMMIT every 20. Hint: FOR i IN 1..100 LOOP UPDATE ... WHERE employee_id = ids(i); IF MOD(i,20)=0 THEN COMMIT; END IF; END LOOP;
+BEGIN
+    FOR i IN 1..100 LOOP
+        UPDATE hr_employees
+        SET salary = salary + 100
+        WHERE employee_id = i;
+
+        IF MOD(i,20) = 0 THEN
+            COMMIT;
+        END IF;
+    END LOOP;
+
+    COMMIT;
+END;
+/
+
+H13. Read committed: Session A commits; Session B started SELECT before A's commit. Hint: B's query may not see A's committed row (snapshot at query start).
+
+Session A:
+
+UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = 101;
+COMMIT;
+
+Session B (started earlier):
+
+SELECT * FROM hr_employees WHERE employee_id = 101;
+-- sees old snapshot
+
+H14. ROLLBACK TO SAVEPOINT releases locks on rows updated after that savepoint? Hint: Yes; those changes are undone and locks released.
+BEGIN
+    SAVEPOINT sp1;
+
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = 1;
+
+    SAVEPOINT sp2;
+
+    UPDATE hr_employees SET salary = salary + 200 WHERE employee_id = 2;
+
+    ROLLBACK TO sp1;
+
+    COMMIT;
+END;
+/
+
+H15. Design: one big transaction (all employees) vs batch COMMIT every N. Trade-offs? Hint: Big: simple, all-or-nothing; batch: less lock time, can resume, but partial commit.
+-- One big transaction
+UPDATE hr_employees SET salary = salary + 100;
+COMMIT;
+
+-- Batch approach
+BEGIN
+    FOR rec IN (SELECT employee_id FROM hr_employees) LOOP
+        UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = rec.employee_id;
+        IF MOD(rec.employee_id, 10) = 0 THEN COMMIT; END IF;
+    END LOOP;
+END;
+/
+
+H16. Block: UPDATE; SAVEPOINT a; UPDATE; SAVEPOINT a; (same name). Then ROLLBACK TO a. Hint: Second SAVEPOINT a moves point; ROLLBACK TO a undoes only work after second a.
+BEGIN
+    SAVEPOINT a;
+    UPDATE hr_employees SET salary = salary + 100 WHERE employee_id = 1;
+
+    SAVEPOINT a;
+    UPDATE hr_employees SET salary = salary + 200 WHERE employee_id = 2;
+
+    ROLLBACK TO a;
+
+    COMMIT;
+END;
+/
+
+H17. Procedure that does INSERT then UPDATE in same table; exception on UPDATE; ensure INSERT also rolled back. Hint: No COMMIT until end; EXCEPTION WHEN OTHERS THEN ROLLBACK; RAISE;
+BEGIN
+    INSERT INTO hr_employees VALUES (999, 'Test', 5000);
+
+    UPDATE hr_employees SET salary = NULL WHERE employee_id = 999;
+
+    COMMIT;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+H18. Two procedures: one COMMITs, one does not. Call both from same block; then ROLLBACK. Hint: Only uncommitted work from second procedure is rolled back.
+BEGIN
+    proc_with_commit;   -- commits
+    proc_without_commit; -- does not commit
+
+    ROLLBACK;
+END;
+/
+
+H19. Lock timeout: Session A holds row; Session B waits. How to make B not wait (fail fast)? Hint: Use NOWAIT in SELECT ... FOR UPDATE or set timeout (Oracle has limited support; application can retry).
+SELECT *
+FROM hr_employees
+WHERE employee_id = 101
+FOR UPDATE NOWAIT;
+
+H20. Document "this procedure commits" vs "caller must commit" in procedure header. Hint: Comment or doc: -- Commits on success. Or: -- Caller must commit.
+CREATE OR REPLACE PROCEDURE update_emp
+IS
+BEGIN
+    -- This procedure commits internally
+    UPDATE hr_employees SET salary = salary + 100;
+    COMMIT;
+END;
+/
